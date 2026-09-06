@@ -1338,7 +1338,7 @@ public abstract class Entity extends Location implements Metadatable, EntityID {
             }
         }
 
-        addActorPacket.setActorData(this.actorDataMap);
+        addActorPacket.setActorData(this.snapshotActorData());
 
         int controlSeat = getControllingSeatIndex();
         for (int i = 0; i < this.passengers.size(); i++) {
@@ -1390,9 +1390,17 @@ public abstract class Entity extends Location implements Metadatable, EntityID {
         this.sendData(player, null);
     }
 
+    private ActorDataMap snapshotActorData() {
+        final ActorDataMap copy = new ActorDataMap();
+        synchronized (this.actorDataMap) {
+            copy.putAll(this.actorDataMap);
+        }
+        return copy;
+    }
+
     public void sendData(Player player, ActorDataMap data) {
         final SetActorDataPacket packet = new SetActorDataPacket();
-        packet.setActorData(data == null ? this.actorDataMap : data);
+        packet.setActorData(data == null ? this.snapshotActorData() : data);
         packet.setTargetRuntimeID(this.runtimeId());
         PropertySyncData syncData = this.propertySyncData();
         packet.getSyncedProperties().getFloatProperties().addAll(syncData.getFloatProperties());
@@ -1407,7 +1415,7 @@ public abstract class Entity extends Location implements Metadatable, EntityID {
 
     public void sendData(Player[] players, ActorDataMap data) {
         final SetActorDataPacket packet = new SetActorDataPacket();
-        packet.setActorData(data == null ? this.actorDataMap : data);
+        packet.setActorData(data == null ? this.snapshotActorData() : data);
         packet.setTargetRuntimeID(this.runtimeId());
         PropertySyncData syncData = this.propertySyncData();
         packet.getSyncedProperties().getFloatProperties().addAll(syncData.getFloatProperties());
