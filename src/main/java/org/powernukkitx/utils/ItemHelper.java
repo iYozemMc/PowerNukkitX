@@ -5,6 +5,7 @@ import org.powernukkitx.block.BlockState;
 import org.powernukkitx.block.BlockUnknown;
 import org.powernukkitx.item.Item;
 import org.powernukkitx.item.ItemUnknown;
+import org.powernukkitx.item.customitem.CustomItem;
 import org.powernukkitx.level.updater.block.BlockStateUpdaters;
 import org.powernukkitx.level.updater.item.ItemUpdaters;
 import org.powernukkitx.nbt.tag.CompoundTag;
@@ -69,7 +70,10 @@ public class ItemHelper {
         }
         Tag tagTag = tag.get("tag");
         if (tagTag instanceof CompoundTag compoundTag && !compoundTag.isEmpty()) {
-            item.setNbt(compoundTag);
+            stripLeakedItemComponents(item, compoundTag);
+            if (!compoundTag.isEmpty()) {
+                item.setNbt(compoundTag);
+            }
         }
 
         if (tag.contains("Block")) {
@@ -115,6 +119,18 @@ public class ItemHelper {
             }
         }
         return item;
+    }
+
+    private void stripLeakedItemComponents(Item item, CompoundTag tag) {
+        if (item instanceof CustomItem) {
+            return;
+        }
+        String[] leaked = tag.getTags().keySet().stream()
+                .filter(key -> key.startsWith("minecraft:"))
+                .toArray(String[]::new);
+        if (leaked.length > 0) {
+            tag.remove(leaked);
+        }
     }
 
     public BlockState getBlockStateHelper(CompoundTag tag) {
