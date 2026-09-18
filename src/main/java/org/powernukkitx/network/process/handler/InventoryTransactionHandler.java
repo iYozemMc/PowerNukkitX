@@ -118,6 +118,10 @@ public class InventoryTransactionHandler implements PacketHandler<InventoryTrans
 
     private static void dropHotBarItemForPlayer(int hotbarSlot, int dropCount, Player player) {
         final HumanInventory inventory = player.getInventory();
+        if (!player.spawned || !player.isAlive() || hotbarSlot < 0 || hotbarSlot >= inventory.getHotbarSize() || dropCount < 1){
+            inventory.sendContents(player);
+            return;
+        }
         Item item = inventory.getItem(hotbarSlot);
         if (item.isNull()) return;
 
