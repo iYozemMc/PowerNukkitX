@@ -1,5 +1,6 @@
 package org.powernukkitx.command.function;
 
+import lombok.extern.slf4j.Slf4j;
 import org.powernukkitx.Server;
 import org.powernukkitx.command.CommandSender;
 import lombok.Getter;
@@ -40,9 +41,30 @@ import java.util.List;
  * @author PowerNukkitX Project Team
  * @since PowerNukkitX 2.0.0
  */
+@Slf4j
 @Getter
 public class Function {
 
+    /**
+     * Maximum nesting of functions calling functions.
+     */
+    public static final int MAX_FUNCTION_DEPTH = 128;
+    /**
+     * Maximum number of commands run by one top-level function call, nested calls included.
+     * Guards against functions that call themselves several times, where the call count grows exponentially.
+     */
+    public static final int MAX_FUNCTION_COMMANDS = 65536;
+
+    /**
+     * Per-thread execution state; functions normally run on the main thread, but plugins may dispatch from elsewhere.
+     */
+    private static final ThreadLocal<ExecutionState> EXECUTION = ThreadLocal.withInitial(ExecutionState::new);
+
+    private static final class ExecutionState {
+        int depth;
+        int commands;
+        boolean limitReached;
+    }
     /**
      * The full path to the function file.
      */
@@ -87,11 +109,39 @@ public class Function {
      * @return true if all commands succeed, false otherwise
      */
     public boolean dispatch(CommandSender sender) {
-        boolean success = true;
-        for (String command : commands) {
-            if (Server.getInstance().executeCommand(sender, command) <= 0)
-                success = false;
+        ExecutionState state = EXECUTION.get();
+        if (state.depth == 0){
+            state.commands = 0;
+            state.limitReached = false;
         }
-        return success;
+        if (state.depth >= MAX_FUNCTION_DEPTH){
+            abort(state, "maximum function depth (" + MAX_FUNCTION_DEPTH + ")");
+            return false;
+        }
+
+        state.depth++;
+        try {
+            boolean success = true;
+            for (String command : commands){
+                if (state.limitReached){
+                    return false;
+                }
+                if (++state.commands > MAX_FUNCTION_COMMANDS){
+                    abort(state, "maximum number of commands (" + MAX_FUNCTION_COMMANDS + ")");
+                    return false;
+                }
+                if (Server.getInstance().executeCommand(sender, command) <= 0) success = false;
+            }
+            return success;
+        } finally {
+            state.depth--;
+        }
+    }
+
+    private void abort(ExecutionState state, String reason){
+        if (!state.limitReached){
+            state.limitReached = true;
+            log.warn("Function {} stopped: reached the {}", fullPath, reason);
+        }
     }
 }
