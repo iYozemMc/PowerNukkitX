@@ -1,6 +1,8 @@
 package org.powernukkitx.network.process.handler;
 
+import org.cloudburstmc.protocol.bedrock.data.PlayerPermissionLevel;
 import org.powernukkitx.AdventureSettings;
+import org.powernukkitx.Player;
 import org.powernukkitx.PlayerHandle;
 import org.powernukkitx.Server;
 import org.powernukkitx.event.player.PlayerHackDetectedEvent;
@@ -8,6 +10,7 @@ import org.powernukkitx.network.process.PacketHandler;
 import org.powernukkitx.network.process.PlayerSessionHolder;
 import org.cloudburstmc.protocol.bedrock.data.AbilitiesIndex;
 import org.cloudburstmc.protocol.bedrock.packet.RequestPermissionsPacket;
+import org.powernukkitx.permission.Permission;
 
 /**
  * @author Kaooot
@@ -36,8 +39,18 @@ public class RequestPermissionsHandler implements PacketHandler<RequestPermissio
             for (AbilitiesIndex controllableAbility : AdventureSettings.CONTROLLABLE_ABILITIES) {
                 player.getAdventureSettings().set(controllableAbility, customPermissions.contains(controllableAbility));
             }
-            player.getAdventureSettings().setPlayerPermission(packet.getPlayerPermissionLevel());
+            if (canChangeOp(playerHandle.player, player, packet.getPlayerPermissionLevel())){
+                player.getAdventureSettings().setPlayerPermission(packet.getPlayerPermissionLevel());
+            }
             player.getAdventureSettings().update();
         }
+    }
+
+    private static boolean canChangeOp(Player sender, Player target, PlayerPermissionLevel permissionLevel){
+        boolean giveOp = permissionLevel == PlayerPermissionLevel.OPERATOR;
+        if (giveOp == target.isOp()){
+            return true;
+        }
+        return sender.hasPermission(giveOp ? "nukkit.command.op.give" : "nukkit.command.op.take");
     }
 }
