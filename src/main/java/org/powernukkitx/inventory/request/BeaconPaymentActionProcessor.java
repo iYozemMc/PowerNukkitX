@@ -16,17 +16,9 @@ import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.request.action
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.Set;
 
 @Slf4j
 public class BeaconPaymentActionProcessor implements ItemStackRequestActionProcessor<BeaconPaymentAction> {
-    private static final Set<String> VALID_PAYMENT_ITEMS = Set.of(
-            Item.IRON_INGOT,
-            Item.GOLD_INGOT,
-            Item.DIAMOND,
-            Item.EMERALD,
-            Item.NETHERITE_INGOT
-    );
 
     @Override
     public ActionResponse handle(BeaconPaymentAction action, Player player, ItemStackRequestContext context) {
@@ -40,7 +32,7 @@ public class BeaconPaymentActionProcessor implements ItemStackRequestActionProce
             return context.error();
         }
         Item payment = beaconInventory.getItem(0);
-        if (payment.isNull() || !VALID_PAYMENT_ITEMS.contains(payment.getId())) {
+        if (!BlockEntityBeacon.isValidPayment(payment)) {
             log.warn("invalid beacon payment item {}!", payment);
             return context.error();
         }

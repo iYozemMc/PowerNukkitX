@@ -12,12 +12,20 @@ import org.powernukkitx.nbt.tag.CompoundTag;
 import org.cloudburstmc.nbt.NbtMap;
 
 import java.util.Map;
+import java.util.Set;
 
 /**
  * @author Rover656
  */
 public class BlockEntityBeacon extends BlockEntitySpawnable implements BlockEntityInventoryHolder {
     protected BeaconInventory inventory;
+    private static final Set<String> VALID_PAYMENT_ITEMS = Set.of(
+        Item.IRON_INGOT,
+        Item.GOLD_INGOT,
+        Item.DIAMOND,
+        Item.EMERALD,
+        Item.NETHERITE_INGOT
+    );
 
     public BlockEntityBeacon(IChunk chunk, CompoundTag  nbt) {
         super(chunk, nbt);
@@ -240,6 +248,11 @@ public class BlockEntityBeacon extends BlockEntitySpawnable implements BlockEnti
             return false;
         }
 
+        BeaconInventory inv = getInventory();
+        if (player.getTopWindow().orElse(null) != inv || !isValidPayment(inv.getItem(0))){
+            return false;
+        }
+
         int primary = nbt.getInt("primary");
         if (!isPrimaryAllowed(primary, this.getPowerLevel())) {
             return false;
@@ -255,10 +268,12 @@ public class BlockEntityBeacon extends BlockEntitySpawnable implements BlockEnti
 
         this.getLevel().addSound(this, Sound.BEACON_POWER);
 
-        BeaconInventory inv = getInventory();
-
         inv.setItem(0, Item.AIR);
         return true;
+    }
+
+    public static boolean isValidPayment(Item item) {
+        return !item.isNull() && VALID_PAYMENT_ITEMS.contains(item.getId());
     }
 
     public static boolean isPrimaryAllowed(int primary, int powerLevel) {
