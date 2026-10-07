@@ -389,7 +389,7 @@ public class AncientCityStructure extends JigsawStructure {
             return;
         }
 
-        Enchantment template = candidates.get(random.nextBoundedInt(candidates.size()));
+        Enchantment template = candidates.get(random.nextBoundedInt(candidates.size() - 1));
         Enchantment enchantment = template.getIdentifier() == null
                 ? Enchantment.getEnchantment(template.getId())
                 : Enchantment.getEnchantment(template.getIdentifier());
