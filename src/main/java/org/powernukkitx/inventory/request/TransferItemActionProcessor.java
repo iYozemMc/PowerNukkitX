@@ -42,6 +42,14 @@ public abstract class TransferItemActionProcessor<T extends TransferItemStackReq
         int destinationSlot = destination.fromNetworkSlot(action.getDestination().getSlot());
         int destinationStackNetworkId = action.getDestination().getStackNetworkId();
         int count = action.getAmount();
+        if (sourceSlot < 0 || sourceSlot >= source.getSize() || destinationSlot < 0 || destinationSlot >= destination.getSize()){
+            log.warn("transfer action points outside of the containers it addresses");
+            return context.error();
+        }
+        if (source == destination && sourceSlot == destinationSlot){
+            log.warn("cannot transfer a slot onto itself!");
+            return context.error();
+        }
         var sourItem = source.getUnclonedItem(sourceSlot);
         if (sourItem.isNull()) {
             log.debug("transfer an air item is not allowed");
