@@ -101,17 +101,19 @@ public class ZippedResourcePack extends AbstractResourcePack {
 
     @Override
     public byte[] getPackChunk(int off, int len) {
-        byte[] chunk;
-        if (this.getPackSize() - off > len) {
-            chunk = new byte[len];
-        } else {
-            chunk = new byte[this.getPackSize() - off];
+        final int size = this.getPackSize();
+        if (off < 0 || off >= size || len <= 0){
+            log.error("Resource pack {} was asked for a chunk at offset:{} and length:{}, outside of its {} bytes",
+                    getPackName(), off, len, size);
+            return null;
         }
 
+        byte[] chunk = new byte[Math.min(len, size - off)];
         try {
             byteBuffer.get(off, chunk);
         } catch (Exception e) {
             log.error("An error occurred while processing the resource pack {} at offset:{} and length:{}", getPackName(), off, len, e);
+            return null;
         }
 
         return chunk;
@@ -119,7 +121,7 @@ public class ZippedResourcePack extends AbstractResourcePack {
 
     @Override
     public int getPackSize() {
-        return (int) this.file.length();
+        return this.byteBuffer == null ? 0 : this.byteBuffer.limit();
     }
 
     @Override
