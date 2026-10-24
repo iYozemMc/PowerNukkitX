@@ -107,16 +107,43 @@ public class CraftRecipeAutoProcessor implements ItemStackRequestActionProcessor
     }
 
     private static boolean consumeActionsCoverRecipe(Player player, List<ItemDescriptor> ingredients, List<ConsumeAction> consumeActions, int timesCrafted) {
-        int[] available = new int[consumeActions.size()];
-        Item[] consumedItems = new Item[consumeActions.size()];
+        ConsumedSource[] sources = new ConsumedSource[consumeActions.size()];
+        int[] amounts = new int[consumeActions.size()];
         for (int i = 0; i < consumeActions.size(); i++) {
-            ConsumeAction consumeAction = consumeActions.get(i);
-            Item item = resolveConsumedItem(player, consumeAction);
-            if (item == null || item.isNull()) {
+            sources[i] = resolveConsumedSource(player, consumeActions.get(i));
+            amounts[i] = consumeActions.get(i).getAmount();
+        }
+        return consumeActionsCoverRecipe(ingredients, sources, amounts, timesCrafted);
+    }
+
+    /**
+    * Whether the consume actions of a request pay for the recipe in full.
+    * <p>
+    * Nothing stops a request from naming the same slot in several consume actions, and between them
+    * they can only take what that slot holds, so each slot is credited once however many actions
+    * name it. Crediting it in full per action would let a request claim an ingredient it never pays
+    * for.
+    *
+    * @param ingredients  what one craft of the recipe needs
+    * @param sources      the slot each consume action names, {@code null} where it did not resolve
+    * @param amounts      how much each consume action claims to take, in the same order
+    * @param timesCrafted how many times the recipe is being crafted
+    * @return whether every ingredient is covered
+    */
+    static boolean consumeActionsCoverRecipe(List<ItemDescriptor> ingredients, ConsumedSource[] sources,
+                                             int [] amounts, int timesCrafted) {
+        int[] available = new int[sources.length];
+        for (int i = 0; i < sources.length; i++) {
+            if (sources[i] == null) {
                 continue;
             }
-            consumedItems[i] = item;
-            available[i] = Math.min(consumeAction.getAmount(), item.getCount());
+            int remaining = sources[i].item().getCount();
+            for (int earlier = 0; earlier < i; earlier++) {
+                if (sources[earlier] != null && sources[earlier].isSameSlotAs(sources[i])){
+                    remaining -= available[earlier];
+                }
+            }
+            available[i] = Math.min(amounts[i], Math.max(remaining, 0));
         }
 
         for (ItemDescriptor ingredient : ingredients) {
@@ -124,9 +151,8 @@ public class CraftRecipeAutoProcessor implements ItemStackRequestActionProcessor
                 continue;
             }
             int required = Math.max(ingredient.getCount(), 1) * timesCrafted;
-            for (int i = 0; i < consumedItems.length && required > 0; i++) {
-                Item item = consumedItems[i];
-                if (item == null || available[i] <= 0 || !ingredient.match(item)) {
+            for (int i = 0; i < sources.length && required > 0; i++) {
+                if (sources[i] == null || available[i] <= 0 || !ingredient.match(sources[i].item())){
                     continue;
                 }
                 int taken = Math.min(required, available[i]);
@@ -142,7 +168,7 @@ public class CraftRecipeAutoProcessor implements ItemStackRequestActionProcessor
     }
 
     @Nullable
-    private static Item resolveConsumedItem(Player player, ConsumeAction action) {
+    private static ConsumedSource resolveConsumedSource(Player player, ConsumeAction action) {
         try {
             var containerName = action.getSource().getFullContainerName();
             Inventory inventory = NetworkMapping.getInventory(player, containerName.getContainerName(), containerName.getDynamicID());
@@ -153,7 +179,11 @@ public class CraftRecipeAutoProcessor implements ItemStackRequestActionProcessor
             if (slot < 0 || slot >= inventory.getSize()) {
                 return null;
             }
-            return inventory.getUnclonedItem(slot);
+            Item item = inventory.getUnclonedItem(slot);
+            if (item == null || item.isNull()){
+                return null;
+            }
+            return new ConsumedSource(inventory, slot, item);
         } catch (Throwable t) {
             log.debug("Failed to resolve the source item of an auto craft consume action", t);
             return null;
@@ -169,5 +199,15 @@ public class CraftRecipeAutoProcessor implements ItemStackRequestActionProcessor
             }
         }
         return found;
+    }
+
+     /**
+     * The slot one consume action names, together with what that slot holds right now. Two actions
+     * addressing the same container and slot compare equal through {@link #isSameSlotAs}.
+     */
+    record ConsumedSource(Inventory inventory, int slot, Item item){
+        boolean isSameSlotAs(ConsumedSource other){
+            return this.inventory == other.inventory && this.slot == other.slot;
+        }
     }
 }
