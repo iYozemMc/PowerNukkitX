@@ -14,7 +14,7 @@ import java.util.Map;
 import java.util.Set;
 
 public class CreativeOutputInventory implements Inventory {
-    private Item item;
+    private Item item = Item.AIR;
     private Player player;
 
     public CreativeOutputInventory(Player player) {
@@ -51,7 +51,7 @@ public class CreativeOutputInventory implements Inventory {
 
     @Override
     public @NotNull Item getItem(int index) {
-        return item;
+        return item != null ? item : Item.AIR;
     }
 
     @Override
@@ -84,12 +84,13 @@ public class CreativeOutputInventory implements Inventory {
 
     @Override
     public Map<Integer, Item> getContents() {
-        return Map.of(0, item);
+        return Map.of(0, this.getItem(0));
     }
 
     @Override
     public void setContents(Map<Integer, Item> items) {
-        item = items.get(0);
+        Item replacement = items.get(0);
+        item = replacement != null ? replacement : Item.AIR;
     }
 
     @Override
