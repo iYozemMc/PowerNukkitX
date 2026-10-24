@@ -68,7 +68,10 @@ public class WorkExecutor extends NearbyFlatRandomRoamExecutor {
                                     }
                                 }
                                 break;
-                            } else super.execute(villager);
+                            } else{
+                                super.execute(villager);
+                                break;
+                            }
                         } else break;
                     }
                     default:
