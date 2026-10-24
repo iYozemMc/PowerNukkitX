@@ -3,6 +3,9 @@ package org.powernukkitx.network.process.cache;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import io.netty.buffer.ByteBuf;
+import it.unimi.dsi.fastutil.longs.LongCollection;
+import it.unimi.dsi.fastutil.longs.LongOpenHashSet;
+import it.unimi.dsi.fastutil.longs.LongSet;
 import org.cloudburstmc.netty.channel.raknet.config.RakChannelOption;
 import org.cloudburstmc.protocol.bedrock.BedrockServerSession;
 import org.powernukkitx.network.NetworkInterface.NetworkPressure;
@@ -10,6 +13,7 @@ import org.powernukkitx.network.RakNetNetworkMetrics;
 
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -164,6 +168,35 @@ public final class ClientBlobCacheManager {
                         transfer.waitingIds.remove(id);
                         return transfer.waitingIds.isEmpty();
                     });
+        }
+    }
+
+     /**
+     * Marks every blob in {@code ids} as acknowledged.
+     * <p>
+     * The client decides how many ids one status packet reports, so acknowledging them one by one
+     * walks the session's active transfers once per id on the network thread. This walks them once
+     * for the whole batch instead.
+     *
+     * @param session the session that acknowledged them
+     * @param ids     the blob ids, which may include ids this session was never advertised
+     */
+    public static void acknowledgeAll(BedrockServerSession session, LongCollection ids){
+        final SessionState state = SESSIONS.get(session);
+        if (state == null || ids.isEmpty()){
+            return;
+        }
+
+        final LongSet acknowledged = new LongOpenHashSet(ids);
+        for (long id : acknowledged){
+            state.pending.remove(id);
+        }
+        synchronized (state){
+            state.activeTransfers.removeIf(
+                transfer -> {
+                    transfer.waitingIds.removeAll(acknowledged);
+                    return transfer.waitingIds.isEmpty();
+                });
         }
     }
 
@@ -392,9 +425,9 @@ public final class ClientBlobCacheManager {
     }
 
     private static final class ActiveTransfer {
-        private final Set<Long> waitingIds;
-        private ActiveTransfer(Set<Long> ids) {
-            this.waitingIds = new HashSet<>(ids);
+        private final LongSet waitingIds;
+        private ActiveTransfer(Collection<Long> ids) {
+            this.waitingIds = new LongOpenHashSet(ids);
         }
     }
 

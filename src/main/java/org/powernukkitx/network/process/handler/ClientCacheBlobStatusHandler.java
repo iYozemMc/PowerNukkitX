@@ -25,14 +25,11 @@ public class ClientCacheBlobStatusHandler implements PacketHandler<ClientCacheBl
 
         final ClientCacheMissResponsePacket response = new ClientCacheMissResponsePacket();
 
-        for (int i = 0; i < packet.getFoundIds().size(); i++) {
-            ClientBlobCacheManager.acknowledge(holder.getSession(), packet.getFoundIds().getLong(i));
-        }
+        ClientBlobCacheManager.acknowledgeAll(holder.getSession(), packet.getFoundIds());
 
         for (int i = 0; i < packet.getMissingIds().size(); i++) {
             final long id = packet.getMissingIds().getLong(i);
             final byte[] blob = ClientBlobCacheManager.get(holder.getSession(), id);
-            ClientBlobCacheManager.acknowledge(holder.getSession(), id);
 
             if (blob == null) {
                 log.debug("Client requested unknown cache blob {}", Long.toUnsignedString(id));
@@ -42,6 +39,7 @@ public class ClientCacheBlobStatusHandler implements PacketHandler<ClientCacheBl
             response.getMissingBlobs().put(id, Unpooled.wrappedBuffer(blob));
         }
 
+        ClientBlobCacheManager.acknowledgeAll(holder.getSession(), packet.getMissingIds());
         holder.getSession().sendPacketImmediately(response);
     }
 
