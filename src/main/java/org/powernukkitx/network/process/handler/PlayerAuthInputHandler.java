@@ -32,6 +32,8 @@ import org.cloudburstmc.protocol.bedrock.packet.PlayerAuthInputPacket;
 @Slf4j
 public class PlayerAuthInputHandler implements PacketHandler<PlayerAuthInputPacket> {
 
+    private static final double MAX_VEHICLE_MOVE_DISTANCE_SQUARED = 10 * 10;
+
     @Override
     public void handle(PlayerAuthInputPacket packet, PlayerSessionHolder holder, Server server) {
         final Player player = holder.getPlayer();
@@ -296,6 +298,7 @@ public class PlayerAuthInputHandler implements PacketHandler<PlayerAuthInputPack
 
     private static void syncVehiclePositionFromRiderInput(Player player, Entity vehicle, PlayerAuthInputPacket pk) {
         if (vehicle == null || !vehicle.isAlive()) return;
+        if (!vehicle.isControlling(player)) return;
 
         Long clientPredictedVehicle = pk.getClientPredictedVehicle();
         if (clientPredictedVehicle == null || clientPredictedVehicle == 0L) return;
@@ -326,6 +329,11 @@ public class PlayerAuthInputHandler implements PacketHandler<PlayerAuthInputPack
         if (boat != null) {
             double boatY = packetPosition.y - boat.getBaseOffset();
             vehiclePosition = new Vector3(packetPosition.x, boatY, packetPosition.z);
+        }
+
+        if (vehiclePosition.distanceSquared(vehicle) > MAX_VEHICLE_MOVE_DISTANCE_SQUARED){
+            vehicle.addMovement(vehicle.x, vehicle.y, vehicle.z, vehicle.yaw, vehicle.pitch, vehicle.yaw);
+            return;
         }
 
         double vehiclePitch;
