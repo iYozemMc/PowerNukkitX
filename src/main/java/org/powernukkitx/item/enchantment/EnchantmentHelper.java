@@ -27,7 +27,12 @@ import java.util.stream.Collectors;
 public final class EnchantmentHelper {
     private static final int MAX_BOOKSHELF_COUNT = 15;
 
-    public static final int ENCH_RECIPEID = 100000;
+    /**
+     * First network id of enchanting options. Trade recipe ids start at
+     * {@link org.powernukkitx.utils.TradeRecipeBuildUtils#TRADE_RECIPEID} and grow with every villager
+     * loaded, so this sits far enough above them that the two ranges never meet.
+     */
+    public static final int ENCH_RECIPEID = 1_000_000_000;
     private static final AtomicInteger ENCH_RECIPE_NETID = new AtomicInteger(ENCH_RECIPEID);
     public static final ConcurrentHashMap<Integer, ItemEnchantOptionWithEntry> RECIPE_MAP = new ConcurrentHashMap<>();
 
