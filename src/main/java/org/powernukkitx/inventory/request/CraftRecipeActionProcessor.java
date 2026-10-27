@@ -9,6 +9,7 @@ import org.powernukkitx.inventory.EnchantInventory;
 import org.powernukkitx.inventory.InputInventory;
 import org.powernukkitx.inventory.Inventory;
 import org.powernukkitx.inventory.SmithingInventory;
+import org.powernukkitx.inventory.TradeInventory;
 import org.powernukkitx.item.Item;
 import org.powernukkitx.item.ItemBanner;
 import org.powernukkitx.item.ItemShield;
@@ -188,6 +189,12 @@ public class CraftRecipeActionProcessor implements ItemStackRequestActionProcess
             CompoundTag tradeRecipe = TradeRecipeBuildUtils.RECIPE_MAP.get(action.getRecipeNetId().getRawId());
             if (tradeRecipe == null) {
                 log.error("Can't find trade recipe from netId {}", action.getRecipeNetId());
+                return context.error();
+            }
+            if (!(inventory instanceof TradeInventory trade)
+                    || !trade.getHolder().getTradeNetIds().contains(action.getRecipeNetId().getRawId())
+                    || tradeRecipe.getInt("tier") > trade.getHolder().getTradeTier()) {
+                log.debug("{} requested trade {} that the open villager does not offer", player.getName(), action.getRecipeNetId());
                 return context.error();
             }
             context.markServerConsumed(ContainerEnumName.TRADE2_INGREDIENT1_CONTAINER, ContainerEnumName.TRADE2_INGREDIENT2_CONTAINER);
