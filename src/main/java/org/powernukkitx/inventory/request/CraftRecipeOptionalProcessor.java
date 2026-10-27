@@ -70,6 +70,10 @@ public class CraftRecipeOptionalProcessor implements ItemStackRequestActionProce
             context.markServerConsumed(ContainerEnumName.ANVIL_INPUT_CONTAINER, ContainerEnumName.ANVIL_MATERIAL_CONTAINER);
             AnvilResult anvilResult = updateAnvilResult(player, anvilInventory, filterString);
             if (anvilResult != null) {
+                if (!player.isCreative() || !anvilResult.result.isNull() && player.getExperienceLevel() < anvilResult.cost()) {
+                    log.debug("{} does not have the {} levels this anvil operation costs", player.getName(), anvilResult.cost());
+                    return context.error();
+                }
                 player.getCreativeOutputInventory().setItem(anvilResult.result());
                 player.setExperience(player.getExperience(), player.getExperienceLevel() - anvilResult.cost());
                 if (!anvilResult.result().isNull()) {
