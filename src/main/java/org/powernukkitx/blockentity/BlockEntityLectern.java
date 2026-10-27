@@ -126,7 +126,7 @@ public class BlockEntityLectern extends BlockEntitySpawnable {
     }
 
     public void setRawPage(int page) {
-        this.nbt.putInt("page", Math.min(page, totalPages));
+        this.nbt.putInt("page", Math.max(0, Math.min(page, totalPages)));
         this.getLevel().updateAround(this);
     }
 

@@ -68,13 +68,13 @@ public class BlockLectern extends BlockTransparent implements RedstoneComponent,
         return BlockEntity.LECTERN;
     }
 
-    
+
     @Override
     public double getMaxY() {
         return y + 0.89999;
     }
 
-    
+
     @Override
     public int getComparatorInputOverride() {
         int power = 0;
@@ -83,8 +83,11 @@ public class BlockLectern extends BlockTransparent implements RedstoneComponent,
         BlockEntityLectern lectern = getBlockEntity();
         if (lectern != null && lectern.hasBook()) {
             maxPage = lectern.getTotalPages();
+            if (maxPage <= 0){
+                return 0;
+            }
             page = lectern.getLeftPage() + 1;
-            power = (int) (((float) page / maxPage) * 16);
+            power = Math.max(0, Math.min(15, (int) (((float) page / maxPage) * 15)));
         }
         return power;
     }
@@ -130,7 +133,7 @@ public class BlockLectern extends BlockTransparent implements RedstoneComponent,
         return true;
     }
 
-    
+
     public boolean isActivated() {
         return getPropertyValue(CommonBlockProperties.POWERED_BIT);
     }
