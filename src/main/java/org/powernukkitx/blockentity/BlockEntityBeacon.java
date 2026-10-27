@@ -5,7 +5,6 @@ import org.powernukkitx.block.Block;
 import org.powernukkitx.entity.effect.Effect;
 import org.powernukkitx.entity.effect.EffectType;
 import org.powernukkitx.inventory.BeaconInventory;
-import org.powernukkitx.item.Item;
 import org.powernukkitx.level.Sound;
 import org.powernukkitx.level.format.IChunk;
 import org.powernukkitx.nbt.tag.CompoundTag;
@@ -233,31 +232,14 @@ public class BlockEntityBeacon extends BlockEntitySpawnable implements BlockEnti
         }
     }
 
+    /**
+     * Beacon effects are only changed through {@link org.powernukkitx.inventory.request.BeaconPaymentActionProcessor},
+     * which checks and consumes the payment. Updates sent as block entity data are refused so the
+     * client is resynced with the real state
+     */
     @Override
     public boolean updateCompoundTag(NbtMap nbt, Player player) {
-        if (!nbt.getString("id").equals(BlockEntity.BEACON)) {
-            return false;
-        }
-
-        int primary = nbt.getInt("primary");
-        if (!isPrimaryAllowed(primary, this.getPowerLevel())) {
-            return false;
-        }
-
-        int secondary = nbt.getInt("secondary");
-        if (secondary != 0 && secondary != primary && secondary != EffectType.REGENERATION.id()) {
-            return false;
-        }
-
-        this.setPrimaryPower(primary);
-        this.setSecondaryPower(secondary);
-
-        this.getLevel().addSound(this, Sound.BEACON_POWER);
-
-        BeaconInventory inv = getInventory();
-
-        inv.setItem(0, Item.AIR);
-        return true;
+        return false;
     }
 
     public static boolean isPrimaryAllowed(int primary, int powerLevel) {

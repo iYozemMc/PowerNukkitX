@@ -12,6 +12,7 @@ import org.cloudburstmc.protocol.bedrock.data.inventory.FullContainerName;
 import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.request.action.BeaconPaymentAction;
 import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.request.action.DestroyAction;
 import org.cloudburstmc.protocol.bedrock.data.inventory.itemstack.request.action.ItemStackRequestActionType;
+import org.powernukkitx.level.Sound;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -79,6 +80,7 @@ public class BeaconPaymentActionProcessor implements ItemStackRequestActionProce
         }
         holder.setPrimaryPower(primary);
         holder.setSecondaryPower(secondary);
+        holder.getLevel().addSound(holder, Sound.BEACON_POWER);
         return null;
     }
 
