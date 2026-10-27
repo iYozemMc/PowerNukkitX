@@ -532,12 +532,12 @@ public class EntityVillagerV2 extends EntityIntelligent implements InventoryHold
         if (!nbtMap.contains("tradeSeed")) {
             this.setTradeSeed(new NukkitRandom().nextInt(Integer.MAX_VALUE - 1));
         } else {
-            this.tradeSeed =nbtMap.getInt("tradeSeed");
+            this.tradeSeed = nbtMap.getInt("tradeSeed");
         }
         if (!nbtMap.contains("canTrade")) {
             this.setCanTrade(!(profession == 0 || profession == 14));
         } else {
-            this.canTrade =nbtMap.getBoolean("canTrade");
+            this.canTrade = nbtMap.getBoolean("canTrade");
         }
         if (!nbtMap.contains("displayName") && profession != 0) {
             this.setDisplayName(getProfessionName(profession));
@@ -961,8 +961,8 @@ public class EntityVillagerV2 extends EntityIntelligent implements InventoryHold
      */
     public void setMaxTradeTier(int maxTradeTier) {
         this.maxTradeTier = maxTradeTier;
-        this.setDataProperty(ActorDataTypes.MAX_TRADE_TIER, 5);
-        this.nbt.putInt("maxTradeTier", this.tradeTier);
+        this.setDataProperty(ActorDataTypes.MAX_TRADE_TIER, maxTradeTier);
+        this.nbt.putInt("maxTradeTier", maxTradeTier);
     }
 
     @Override
@@ -989,8 +989,8 @@ public class EntityVillagerV2 extends EntityIntelligent implements InventoryHold
      */
     public void setTradeExp(int tradeExp) {
         this.tradeExp = tradeExp;
-        this.setDataProperty(ActorDataTypes.TRADE_EXPERIENCE, 10);
-        this.nbt.putInt("tradeExp", this.tradeTier);
+        this.setDataProperty(ActorDataTypes.TRADE_EXPERIENCE, tradeExp);
+        this.nbt.putInt("tradeExp", tradeExp);
     }
 
 
