@@ -148,7 +148,7 @@ public class CrafterInventory extends ContainerInventory implements CraftTypeInv
     }
 
     public void setSlotState(@Range(from = 0, to = 8) int slot, boolean state) {
-        this.setLockedBitMask(state ? disabledSlots ^ (1 << slot) : disabledSlots | (1 << slot));
+        this.setLockedBitMask(state ? disabledSlots & ~(1 << slot) : disabledSlots | (1 << slot));
         Server.broadcastPacket(getViewers(), getHolder().getSpawnPacket());
         ((BlockCrafter) getHolder().getLevelBlock()).updateAllAroundRedstone();
     }
