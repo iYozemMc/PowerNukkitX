@@ -12,6 +12,7 @@ import org.cloudburstmc.protocol.bedrock.data.inventory.ContainerType;
 import org.cloudburstmc.protocol.bedrock.data.inventory.ItemEnchantOption;
 import org.cloudburstmc.protocol.bedrock.packet.PlayerEnchantOptionsPacket;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -20,6 +21,7 @@ import java.util.Map;
  * @author MagicDroidX (Nukkit Project)
  */
 public class EnchantInventory extends ContainerInventory implements BlockEntityInventoryNameable, CraftTypeInventory, SoleInventory {
+    private final Map<Player, List<ItemEnchantOption>> offeredOptions = new HashMap<>();
     public EnchantInventory(BlockEntityEnchantTable table) {
         super(table, ContainerType.ENCHANTMENT, 2);
     }
@@ -43,11 +45,16 @@ public class EnchantInventory extends ContainerInventory implements BlockEntityI
     @Override
     public void onSlotChange(int index, Item before, boolean send) {
         if (index == 0) {
+            for (final Player viewer : this.getViewers()){
+                forgetOption(viewer);
+            }
             if (before.isNull()) {
                 for (final Player viewer : this.getViewers()) {
                     List<ItemEnchantOption> options = EnchantmentHelper.getEnchantOptions(this.getHolder(), this.getFirst(), viewer.getEnchantmentSeed());
+                    offeredOptions.put(viewer, options);
 
                     PlayerEnchantOptionsRequestEvent event = new PlayerEnchantOptionsRequestEvent(viewer, this, options);
+                    viewer.getServer().getPluginManager().callEvent(event);
                     if (!event.isCancelled() && !event.getOptions().isEmpty()) {
                         final PlayerEnchantOptionsPacket pk = new PlayerEnchantOptionsPacket();
                         pk.getOptions().addAll(event.getOptions());
@@ -82,6 +89,19 @@ public class EnchantInventory extends ContainerInventory implements BlockEntityI
 
         clear(0);
         clear(1);
+        forgetOption(who);
+    }
+
+    private void forgetOption(Player viewer){
+        List<ItemEnchantOption> options = offeredOptions.remove(viewer);
+        if (options != null && !options.isEmpty()){
+            EnchantmentHelper.RECIPE_MAP.values().removeIf(entry -> options.contains(entry.getOption()));
+        }
+    }
+
+    public boolean isOfferedTo(Player viewer, ItemEnchantOption option){
+        List<ItemEnchantOption> options = offeredOptions.get(viewer);
+        return options != null && options.contains(option);
     }
 
     public Item getFirst() {

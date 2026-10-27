@@ -151,6 +151,10 @@ public class CraftRecipeActionProcessor implements ItemStackRequestActionProcess
                 return context.error();
             }
             final ItemEnchantOption enchantOptionData = enchantOptionWithEntry.getOption();
+            if (!(inventory instanceof EnchantInventory table) || !table.isOfferedTo(player, enchantOptionData)){
+                log.debug("{} used an enchant option the table did not offer", player.getName());
+                return context.error();
+            }
             context.markServerConsumed(ContainerEnumName.ENCHANTING_INPUT_CONTAINER, ContainerEnumName.ENCHANTING_MATERIAL_CONTAINER);
             Item first = inventory.getItem(0);
             if (first.isNull()) {
@@ -166,12 +170,16 @@ public class CraftRecipeActionProcessor implements ItemStackRequestActionProcess
                 enchantments.add(enchantment);
             }
             item.addEnchantment(enchantments.toArray(Enchantment.EMPTY_ARRAY));
-            EnchantItemEvent event = new EnchantItemEvent((EnchantInventory) inventory, first.clone().autoAssignStackNetworkId(), item, enchantOptionData.getCost(), player);
+            EnchantItemEvent event = new EnchantItemEvent(table, first.clone().autoAssignStackNetworkId(), item, enchantOptionData.getCost(), player);
             Server.getInstance().getPluginManager().callEvent(event);
             if (!event.isCancelled()) {
                 if (!player.isCreative()) {
                     int lapisCost = enchantOptionWithEntry.getEntry() + 1;
-                    if (inventory.getItem(1).getCount() < lapisCost) {
+                    Item lapis = inventory.getItem(1);
+                    if (!Item.LAPIS_LAZULI.equals(lapis.getId()) || lapis.getCount() < lapisCost) {
+                        return context.error();
+                    }
+                    if (player.getExperienceLevel() < Math.max(enchantOptionData.getCost(), lapisCost)) {
                         return context.error();
                     }
                     player.setExperience(player.getExperience(), player.getExperienceLevel() - lapisCost);
