@@ -164,8 +164,9 @@ public class InventoryTransactionHandler implements PacketHandler<InventoryTrans
             return;
         }
         ItemUseOnActorActionType type = transaction.getActionType();
-        if (player.getInventory().getHeldItemIndex() != transaction.getSlot()) {
-            player.getInventory().equipItem(transaction.getSlot());
+        if (player.getInventory().getHeldItemIndex() != transaction.getSlot()
+            && !player.getInventory().equipItem(transaction.getSlot())) {
+            return;
         }
         final Item itemFromNetwork = Item.fromNetwork(transaction.getItem());
         if (!itemFromNetwork.equalsExact(player.getInventory().getItemInMainHand())) {
