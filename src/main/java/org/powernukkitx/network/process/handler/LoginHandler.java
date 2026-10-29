@@ -302,14 +302,14 @@ public class LoginHandler implements PacketHandler<LoginPacket> {
             } catch (Exception | AssertionError | LinkageError e) {
                 log.debug("Error while validating login", e);
                 eventLoop.execute(() -> {
-                    if (holder.getSession().isConnected()) {
+                    if (!holder.isDisconnected() && holder.getSession().isConnected()) {
                         failLogin(holder, server, DisconnectFailReason.NOT_AUTHENTICATED, null);
                     }
                 });
                 return;
             }
             eventLoop.execute(() -> {
-                if (holder.getSession().isConnected()) {
+                if (!holder.isDisconnected() && holder.getSession().isConnected()) {
                     then.accept(result);
                 }
             });
