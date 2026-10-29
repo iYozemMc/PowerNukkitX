@@ -1289,8 +1289,8 @@ public class Server {
                     long nanosPerTick = getNanosPerTick();
                     GameLoop.waitUntilNanos(this.nextTickNanos,
                         nanosPerTick < GameLoop.SPIN_ACTIVATION_NANOS ? GameLoop.SPIN_MARGIN_NANOS : 0L);
-                } catch (RuntimeException e) {
-                    log.error("A RuntimeException happened while ticking the server", e);
+                } catch (RuntimeException | StackOverflowError e) {
+                    log.error("An error happened while ticking the server", e);
                 }
             }
         } catch (Throwable e) {
@@ -1313,7 +1313,7 @@ public class Server {
                     for (Player player : level.getPlayers().values()) {
                         try {
                             if (!tickPlayers && player.spawned) player.onUpdate(currentTick);
-                        } catch (Exception e) {
+                        } catch (Exception | StackOverflowError e) {
                             log.error(this.getLanguage().tr("nukkit.level.tickError",
                                 level.getFolderPath(), Utils.getExceptionMessage(e)), e);
                         }
@@ -1329,7 +1329,7 @@ public class Server {
                         continue;
                     }
                     level.tickAndAdjustTickRate(currentTick);
-                } catch (Exception e) {
+                } catch (Exception | StackOverflowError e) {
                     log.error(this.getLanguage().tr("nukkit.level.tickError",
                         level.getFolderPath(), Utils.getExceptionMessage(e)), e);
                     e.printStackTrace();

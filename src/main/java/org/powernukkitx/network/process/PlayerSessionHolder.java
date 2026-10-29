@@ -543,7 +543,7 @@ public class PlayerSessionHolder {
             }
             try {
                 handler.processInbound(packet);
-            } catch (Exception e) {
+            } catch (Exception | StackOverflowError e) {
                 log.error("Error handling packet {} for player {}", packet.getClass().getSimpleName(), created.getName(), e);
             } finally {
                 this.spawnBacklog.poll();

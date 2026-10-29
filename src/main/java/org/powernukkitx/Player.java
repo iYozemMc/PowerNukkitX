@@ -1304,7 +1304,7 @@ public class Player extends EntityHuman implements CommandSender, ChunkLoader, I
         while (this.level == owner && (packet = this.inboundPackets.poll()) != null) {
             try {
                 processor.accept(packet);
-            } catch (Exception e) {
+            } catch (Exception | StackOverflowError e) {
                 log.error("Error handling inbound packet {} for player {}", packet.getClass().getSimpleName(), this.getName(), e);
             }
         }

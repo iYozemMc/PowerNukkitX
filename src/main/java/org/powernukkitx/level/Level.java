@@ -2314,7 +2314,7 @@ public class Level implements Metadatable, LiquidUpdateAccess {
                 }
             }
             if (prof) phase[8] = -phaseStart + (phaseStart = System.nanoTime());
-        } catch (Exception e) {
+        } catch (Exception | StackOverflowError e) {
             log.error(getServer().getLanguage().tr("nukkit.level.tickError",
                     this.getFolderPath(), Utils.getExceptionMessage(e)), e);
             e.printStackTrace();
