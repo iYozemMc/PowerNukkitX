@@ -53,7 +53,7 @@ public class InternalPackManager {
     private volatile boolean draining = false;
 
     public void registerPack(ResourcePack resourcePack, int maxChunkSize, int chunkCount) {
-        this.packs.put(resourcePack.getPackId(), new InternalPackManager.PackMeta(resourcePack.getPackId(), resourcePack, maxChunkSize, chunkCount));
+        this.packs.putIfAbsent(resourcePack.getPackId(), new InternalPackManager.PackMeta(resourcePack.getPackId(), resourcePack, maxChunkSize, chunkCount));
     }
 
     public void handleChunkRequest(ResourcePackChunkRequestPacket pk) {
