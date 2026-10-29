@@ -436,6 +436,14 @@ public class Level implements Metadatable, LiquidUpdateAccess {
         }
     };
     private final Queue<QueuedUpdate> normalUpdateQueue = new ConcurrentLinkedDeque<>();
+    /**
+     * Normal block updates handled in one tick. Chains of updates settle far below this; once it is
+     * reached the rest waits for the next tick, so blocks that keep updating each other slow the
+     * level down instead of keeping its tick from ever finishing.
+     */
+    private static final int MAX_NORMAL_UPDATES_PER_TICK = 65_536;
+    private static final long NORMAL_UPDATE_LIMIT_WARN_INTERVAL_MS = 10_000L;
+    private long lastNormalUpdateLimitWarn;
     private record ChunkSendRequest(Player player, ClientBlobCacheManager.TransferBatch cacheTransferBatch) {
     }
 
@@ -2155,7 +2163,12 @@ public class Level implements Metadatable, LiquidUpdateAccess {
 
             this.deriveLegacyChunkStates();
 
+            int normalUpdates = 0;
             while (!this.normalUpdateQueue.isEmpty()) {
+                if (++normalUpdates > MAX_NORMAL_UPDATES_PER_TICK){
+                    warnNormalUpdateLimit();
+                    break;
+                }
                 QueuedUpdate queuedUpdate = this.normalUpdateQueue.poll();
                 Block block = getBlock(queuedUpdate.block, queuedUpdate.block.layer);
                 int chunkX = block.getFloorX() >> 4;
@@ -3175,6 +3188,16 @@ public class Level implements Metadatable, LiquidUpdateAccess {
                 normalUpdateQueue.add(new QueuedUpdate(side.getLevelBlockAtLayer(1), face));
             }
         }
+    }
+
+    private void warnNormalUpdateLimit() {
+        long now = System.currentTimeMillis();
+        if (now - this.lastNormalUpdateLimitWarn < NORMAL_UPDATE_LIMIT_WARN_INTERVAL_MS) return;
+        this.lastNormalUpdateLimitWarn = now;
+        QueuedUpdate next = this.normalUpdateQueue.peek();
+        if (next == null) return;
+        Block block = next.getBlock();
+        log.warn("Level {} reached {} block updates in one tick and deferred the rest, next one is at {}, {}, {}", this.getName(), MAX_NORMAL_UPDATES_PER_TICK, block.getFloorX(), block.getFloorY(), block.getFloorZ());
     }
 
     @ApiStatus.Internal
