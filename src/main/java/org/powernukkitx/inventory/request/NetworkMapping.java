@@ -95,7 +95,7 @@ public class NetworkMapping {
                     //If player is looking in container, but bundle is not inside the container.
                     item = findBundle(player.getInventory(), bundleId);
                 }
-                if (item == null && player.getCursorInventory().getUnclonedItem() instanceof ItemBundle onCursor) {
+                if (item == null && player.getCursorInventory().getUnclonedItem() instanceof ItemBundle onCursor && onCursor.getBundleId() == bundleId) {
                     item = onCursor;
                 }
                 if (item == null) {
