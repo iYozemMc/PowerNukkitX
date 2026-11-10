@@ -59,7 +59,7 @@ import lombok.extern.slf4j.Slf4j;
  * @author Kaooot
  */
 @Slf4j
-public class InventoryTransactionHandler implements PacketHandler<InventoryTransactionPacket> {
+public class    InventoryTransactionHandler implements PacketHandler<InventoryTransactionPacket> {
 
     @Override
     public void handle(InventoryTransactionPacket packet, PlayerSessionHolder holder, Server server) {
@@ -318,8 +318,11 @@ public class InventoryTransactionHandler implements PacketHandler<InventoryTrans
         BlockVector3 blockVector = BlockVector3.fromNetwork(transaction.getPosition());
         BlockFace face = BlockFace.fromIndex(transaction.getFace());
         ItemUseActionType type = transaction.getActionType();
-        if (player.getInventory().getHeldItemIndex() != transaction.getSlot()) {
-            player.getInventory().equipItem(transaction.getSlot());
+        if (player.getInventory().getHeldItemIndex() != transaction.getSlot() && !player.getInventory().equipItem(transaction.getSlot())) {
+            if (type == ItemUseActionType.PLACE && player.getInventory().isHotbarSlot(transaction.getSlot())){
+                resyncPlace(player, transaction);
+            }
+            return;
         }
         switch (type) {
             case PLACE -> {
