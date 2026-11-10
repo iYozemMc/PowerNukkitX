@@ -231,7 +231,7 @@ public class BlockPalette extends Palette<BlockState> {
 
         write.ensureWordCapacity(byteBuf, MAX_VARINT_BYTES);
         byteBuf.writeByte(getPaletteHeader(write.bitArray.version(), true));
-        for (int word : write.bitArray.words()) byteBuf.writeIntLE(word);
+        write.writeBitArrayWords(byteBuf);
         this.bitArray.writeSizeToNetwork(byteBuf, write.palette.size());
         for (BlockState value : write.palette)
             VarInts.writeInt(byteBuf, serializer.serialize(value));

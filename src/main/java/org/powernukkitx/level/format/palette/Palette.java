@@ -7,6 +7,7 @@ import org.powernukkitx.block.BlockUnknown;
 import org.powernukkitx.level.format.ChunkSection;
 import org.powernukkitx.level.format.bitarray.BitArray;
 import org.powernukkitx.level.format.bitarray.BitArrayVersion;
+import org.powernukkitx.level.format.bitarray.ZeroBitArray;
 import org.powernukkitx.level.updater.block.BlockStateUpdaters;
 import org.powernukkitx.level.updater.util.tagupdater.CompoundTagUpdaterContext;
 import org.powernukkitx.network.NetworkConstants;
@@ -66,7 +67,7 @@ public class Palette<V> {
     }
 
     public Palette(V first, BitArrayVersion version) {
-        this.bitArray = version.createArray(ChunkSection.SIZE);
+        this.bitArray = createZeroArray(version);
         this.palette = new ArrayList<>(16);
         this.addToPalette(first);
         this.lastPaletteValue = first;
@@ -74,7 +75,7 @@ public class Palette<V> {
     }
 
     public Palette(V first, List<V> palette, BitArrayVersion version) {
-        this.bitArray = version.createArray(ChunkSection.SIZE);
+        this.bitArray = createZeroArray(version);
         this.palette = palette;
         this.addToPalette(first);
         this.lastPaletteValue = first;
@@ -157,12 +158,39 @@ public class Palette<V> {
         }
 
         if (this.bitArray.version() == BitArrayVersion.V0) return;
+        if (this.bitArray instanceof ZeroBitArray zeroBitArray){
+            if (paletteIndex == 0){
+                return;
+            }
+
+            this.bitArray = zeroBitArray.version().createArray(zeroBitArray.size());
+        }
         this.bitArray.set(index, paletteIndex);
         // Writing entry 0 can only ever leave the section empty or not depending on the other
         // entries, so that case falls back to a rescan; anything else makes it definitely not empty.
         this.emptyState = paletteIndex == 0 ? EMPTY_UNKNOWN : EMPTY_NO;
     }
 
+    /**
+     * A palette starts out holding its first value everywhere which needs no words
+     */
+    private static BitArray createZeroArray(BitArrayVersion version) {
+        if (version == BitArrayVersion.V0){
+            return version.createArray(ChunkSection.SIZE);
+        }
+        return new ZeroBitArray(version, ChunkSection.SIZE);
+    }
+
+    /**
+     * Write the words of the bit array as a loop over {@code words()} calling {@code writeIntLE} would
+     */
+    protected void writeBitArrayWords(ByteBuf byteBuf) {
+        if (this.bitArray instanceof ZeroBitArray zeroBitArray){
+            byteBuf.writeZero(zeroBitArray.wordCount() * Integer.BYTES);
+            return;
+        }
+        for (int word : this.bitArray.words()) byteBuf.writeIntLE(word);
+    }
     /**
      * Write the Palette data to the network buffer
      *
@@ -224,14 +252,15 @@ public class Palette<V> {
      * @param bytesPerEntry upper bound on the encoded size of one palette entry
      */
     protected void ensureWordCapacity(ByteBuf byteBuf, int bytesPerEntry) {
-        byteBuf.ensureWritable(1 + this.bitArray.words().length * Integer.BYTES
+        final int wordCount = this.bitArray instanceof ZeroBitArray zeroBitArray ? zeroBitArray.wordCount() : this.bitArray.words().length;
+        byteBuf.ensureWritable(1 + wordCount * Integer.BYTES
                 + MAX_VARINT_BYTES + this.palette.size() * bytesPerEntry);
     }
 
     protected void writeWords(ByteBuf byteBuf, RuntimeDataSerializer<V> serializer) {
         ensureWordCapacity(byteBuf, MAX_VARINT_BYTES);
         byteBuf.writeByte(getPaletteHeader(this.bitArray.version(), true));
-        for (int word : this.bitArray.words()) byteBuf.writeIntLE(word);
+        this.writeBitArrayWords(byteBuf);
         this.bitArray.writeSizeToNetwork(byteBuf, this.palette.size());
         for (V value : this.palette) {
             VarInts.writeInt(byteBuf, serializer.serialize(value));
@@ -241,7 +270,7 @@ public class Palette<V> {
     public void writeToStoragePersistent(ByteBuf byteBuf, PersistentDataSerializer<V> serializer) {
         ensureWordCapacity(byteBuf, Integer.BYTES);
         byteBuf.writeByte(Palette.getPaletteHeader(this.bitArray.version(), false));
-        for (int word : this.bitArray.words()) byteBuf.writeIntLE(word);
+        this.writeBitArrayWords(byteBuf);
         byteBuf.writeIntLE(this.palette.size());
         try (final ByteBufOutputStream bufOutputStream = new ByteBufOutputStream(byteBuf);
              final NBTOutputStream nbtOutputStream = NbtUtils.createWriterLE(bufOutputStream)) {
@@ -291,7 +320,7 @@ public class Palette<V> {
 
         ensureWordCapacity(byteBuf, Integer.BYTES);
         byteBuf.writeByte(Palette.getPaletteHeader(this.bitArray.version(), true));
-        for (int word : this.bitArray.words()) byteBuf.writeIntLE(word);
+        this.writeBitArrayWords(byteBuf);
         byteBuf.writeIntLE(this.palette.size());
         for (V value : this.palette) byteBuf.writeIntLE(serializer.serialize(value));
     }
@@ -363,11 +392,13 @@ public class Palette<V> {
         boolean empty = false;
         if (this.palette.size() == 1) {
             empty = true;
-            for (int word : this.bitArray.words())
-                if (word != 0L) {
-                    empty = false;
-                    break;
-                }
+            if (!(this.bitArray instanceof ZeroBitArray)) {
+                for (int word : this.bitArray.words())
+                    if (word != 0L) {
+                        empty = false;
+                        break;
+                    }
+            }
         }
         this.emptyState = empty ? EMPTY_YES : EMPTY_NO;
         return empty;
@@ -465,15 +496,15 @@ public class Palette<V> {
         final int[] words = new int[wordCount];
         for (int i = 0; i < wordCount; i++) words[i] = byteBuf.readIntLE();
 
-        this.bitArray = version.createArray(ChunkSection.SIZE, words);
+        this.bitArray = isAllZero(words) && version != BitArrayVersion.V0 ? new ZeroBitArray(version, ChunkSection.SIZE) : version.createArray(ChunkSection.SIZE, words);
         this.clearPalette();
     }
 
     protected void onResize(BitArrayVersion version) {
         final BitArray source = this.bitArray;
         final BitArrayVersion sourceVersion = source.version();
-        if (sourceVersion == BitArrayVersion.V0) {
-            this.bitArray = version.createArray(ChunkSection.SIZE);
+        if (sourceVersion == BitArrayVersion.V0 || source instanceof ZeroBitArray) {
+            this.bitArray = createZeroArray(version);
             return;
         }
 
@@ -535,11 +566,29 @@ public class Palette<V> {
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof Palette<?> palette1)) return false;
-        return Objects.equals(palette, palette1.palette) && Objects.equals(bitArray, palette1.bitArray);
+        return Objects.equals(palette, palette1.palette) && sameEntries(bitArray, palette1.bitArray);
     }
 
     @Override
     public int hashCode() {
-        return Arrays.hashCode(new Object[]{palette, bitArray});
+        return Arrays.hashCode(new Object[]{palette, bitArray.version(), bitArray.size(), Arrays.hashCode(bitArray.words())});
+    }
+
+    private static boolean sameEntries(BitArray first, BitArray second) {
+        if (first == second) return true;
+        if (first == null || second == null) return false;
+        if (first instanceof ZeroBitArray || second instanceof ZeroBitArray) {
+            return first.version() == second.version() && first.size() == second.size() && isAllZero(first.words()) && isAllZero(second.words());
+        }
+        return first.equals(second);
+    }
+
+    private static boolean isAllZero(int[] words) {
+        for (int word : words) {
+            if (word != 0) {
+                return false;
+            }
+        }
+        return true;
     }
 }
