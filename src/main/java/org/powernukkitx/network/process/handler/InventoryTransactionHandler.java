@@ -59,7 +59,7 @@ import lombok.extern.slf4j.Slf4j;
  * @author Kaooot
  */
 @Slf4j
-public class    InventoryTransactionHandler implements PacketHandler<InventoryTransactionPacket> {
+public class InventoryTransactionHandler implements PacketHandler<InventoryTransactionPacket> {
 
     @Override
     public void handle(InventoryTransactionPacket packet, PlayerSessionHolder holder, Server server) {
