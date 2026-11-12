@@ -234,7 +234,7 @@ public class PlayerAuthInputHandler implements PacketHandler<PlayerAuthInputPack
                     // fire only sends START_DESTROY_BLOCK, so extinguish it before filtering the action out
                     Vector3 hitPos = Vector3.fromNetwork(action.getBlockPosition().toFloat());
                     BlockFace hitFace = BlockFace.fromIndex(action.getFacing());
-                    if (Player.getFireAt(player.getLevel().getBlock(hitPos), hitFace) != null) {
+                    if (player.canInteract(hitPos.add(0.5, 0.5, 0.5), 13) && Player.getFireAt(player.getLevel().getBlock(hitPos), hitFace) != null) {
                         player.onBlockBreakStart(hitPos, hitFace);
                     }
                     continue;
@@ -247,13 +247,17 @@ public class PlayerAuthInputHandler implements PacketHandler<PlayerAuthInputPack
                         && (lastBreakPos.getX() != blockPos.getX() || lastBreakPos.getY() != blockPos.getY() || lastBreakPos.getZ() != blockPos.getZ());
                 if (blockPositionChanged) {
                     //When a block is broken instantaneous, the client sometimes just sends a START_DESTROY_BLOCK, but never completes or aborts it. On the client side, the block is also broken.
-                    double breakTime = player.getLevel().getBlock(lastBreakPos.asVector3()).calculateBreakTime(player.getInventory().getItemInMainHand(), player);
-                    boolean canCompleteBreak = Long.sum(player.lastBreak, (long) (breakTime * 1000)) <= System.currentTimeMillis() + 50;
+                    Vector3 lastBreakVector = lastBreakPos.asVector3();
+                    boolean canCompleteBreak = false;
+                    if (player.canInteract(lastBreakVector.add(0.5, 0.5, 0.5), player.isCreative() ? 13 : 7)) {
+                        double breakTime = player.getLevel().getBlock(lastBreakVector, false).calculateBreakTime(player.getInventory().getItemInMainHand(), player);
+                        canCompleteBreak = Long.sum(player.lastBreak, (long) (breakTime * 1000)) <= System.currentTimeMillis() + 50;
+                    }
                     if (canCompleteBreak && player.isBreakingBlock()
                             && lastAction.getPlayerActionType() == PlayerActionType.START_DESTROY_BLOCK) {
                         player.onBlockBreakComplete(lastBreakPos, BlockFace.fromIndex(lastAction.getFacing()));
                     } else {
-                        playerHandle.onBlockBreakAbort(lastBreakPos.asVector3());
+                        playerHandle.onBlockBreakAbort(lastBreakVector);
                     }
                 }
 
