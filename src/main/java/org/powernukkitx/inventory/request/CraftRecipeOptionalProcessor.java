@@ -362,6 +362,10 @@ public class CraftRecipeOptionalProcessor implements ItemStackRequestActionProce
             int startZ = item.getMapStartZ();
             int scale = item.getMapScale() + 1;
 
+            if (level == null || scale < 1 || scale > ItemFilledMap.MAX_MAP_SCALE) {
+                return null;
+            }
+
             item.renderMap(level, startX, startZ, scale);
             item.sendImage(player, item.getMapScale());
 

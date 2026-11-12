@@ -103,7 +103,7 @@ public class HumanInventory extends BaseInventory {
                 return false;
             }
             if (this.getItem(slot) instanceof ItemFilledMap map) {
-                map.sendImage(player, 1);
+                map.sendHeldImage(player);
             }
 
             if (player.fishing != null) {

@@ -1,5 +1,6 @@
 package org.powernukkitx.item;
 
+import com.google.common.collect.MapMaker;
 import it.unimi.dsi.fastutil.ints.IntList;
 import it.unimi.dsi.fastutil.longs.LongArrayList;
 import org.powernukkitx.Player;
@@ -22,9 +23,18 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.util.Map;
 
 @Slf4j
 public class ItemFilledMap extends Item {
+
+    // First render plus four zoom steps, as in vanilla
+    public static final int MAX_MAP_SCALE = 5;
+    private static final long RENDER_COOLDOWN_MILLIS = 1000L;
+    private static final long HELD_IMAGE_COOLDOWN_MILLIS = 250L;
+    private static final Map<Player, Long> LAST_RENDER = new MapMaker().weakKeys().makeMap();
+    private static final Map<Player, Long> LAST_HELD_IMAGE = new MapMaker().weakKeys().makeMap();
+
     public static final ItemDefinition DEFINITION = Item.DEFAULT_DEFINITION.toBuilder()
             .canBeActivated(true)
             .maxStackSize(1)
@@ -125,6 +135,16 @@ public class ItemFilledMap extends Item {
         sendImage(player, 1);
     }
 
+    public void sendHeldImage(Player player) {
+        long now = System.currentTimeMillis();
+        Long last = LAST_HELD_IMAGE.get(player);
+        if (last != null && now - last < HELD_IMAGE_COOLDOWN_MILLIS) {
+            return;
+        }
+        LAST_HELD_IMAGE.put(player, now);
+        trySendImage(player);
+    }
+
     public void sendImage(Player player, int scale) {
         // don't load the image from NBT if it has been done before.
         BufferedImage image = this.image != null ? this.image : loadImageFromNBT();
@@ -191,7 +211,14 @@ public class ItemFilledMap extends Item {
     public boolean onClickAir(Player player, Vector3 directionVector) {
         if (getDamage() == 6) return false;
         Server server = player.getServer();
-        renderMap(server.getLevel(getMapWorld()), getMapStartX(), getMapStartZ(), getMapScale());
+        Level level = server.getLevel(getMapWorld());
+        int scale = getMapScale();
+        if (level == null || scale < 1 || scale > MAX_MAP_SCALE) return false;
+        long now = System.currentTimeMillis();
+        Long last = LAST_RENDER.get(player);
+        if (last != null && now - last < RENDER_COOLDOWN_MILLIS) return false;
+        LAST_RENDER.put(player, now);
+        renderMap(level, getMapStartX(), getMapStartZ(), scale);
         player.getInventory().setItemInMainHand(this);
         sendImage(player, getMapScale());
         return true;
