@@ -1,5 +1,6 @@
 package org.powernukkitx.network.process.handler;
 
+import com.google.common.collect.MapMaker;
 import org.cloudburstmc.protocol.bedrock.data.payload.inventory.net.ItemStackRequestId;
 import org.powernukkitx.Player;
 import org.powernukkitx.PlayerHandle;
@@ -63,6 +64,9 @@ public class ItemStackRequestHandler implements PacketHandler<ItemStackRequestPa
         PROCESSORS.put(ItemStackRequestActionType.CRAFT_LOOM, new CraftLoomActionProcessor());
         PROCESSORS.put(ItemStackRequestActionType.SCREEN_BEACON_PAYMENT, new BeaconPaymentActionProcessor());
     }
+    // A packet holds up to 128 requests of up to 100 actions; a player clicking as fast as it can stays far below this
+    private static final int MAX_ACTIONS_PER_SECOND = 1000;
+    private final Map<Player, ActionBudget> budgets = new MapMaker().weakKeys().makeMap();
 
     @Override
     public void handle(ItemStackRequestPacket packet, PlayerSessionHolder holder, Server server) {
@@ -79,7 +83,44 @@ public class ItemStackRequestHandler implements PacketHandler<ItemStackRequestPa
             return;
         }
 
+        int actions = 0;
+        for (var request : packet.getRequests()) {
+            actions += Math.max(1, request.getActions().length);
+        }
+
+        if (!this.budgets.computeIfAbsent(player, ignored -> new ActionBudget()).tryConsume(actions)) {
+            log.debug("Player {} sent too many item stack request actions", playerHandle.getUsername());
+            rejectRequests(packet, player);
+            return;
+        }
+
         handleRequests(packet, player);
+    }
+
+    private static void rejectRequests(ItemStackRequestPacket packet, Player player) {
+        var itemStackResponsePacket = new ItemStackResponsePacket();
+        for (var request : packet.getRequests()) {
+            itemStackResponsePacket.getResponses().add(new ItemStackResponseInfo(ItemStackNetResult.ERROR, new ItemStackRequestId(request.getClientRequestId()), new ObjectArrayList<>()));
+        }
+        player.sendPacket(itemStackResponsePacket);
+    }
+
+    private static final class ActionBudget {
+        private long windowStart = System.nanoTime();
+        private int used;
+
+        private boolean tryConsume(int amount) {
+            long now = System.nanoTime();
+            if (now - this.windowStart >= 1_000_000_000L) {
+                this.windowStart = now;
+                this.used = 0;
+            }
+            if (this.used + amount > MAX_ACTIONS_PER_SECOND) {
+                return false;
+            }
+            this.used += amount;
+            return true;
+        }
     }
 
     private void handleRequests(ItemStackRequestPacket packet, Player player) {
