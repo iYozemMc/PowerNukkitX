@@ -1,5 +1,6 @@
 package org.powernukkitx.form.window;
 
+import lombok.extern.slf4j.Slf4j;
 import org.powernukkitx.Player;
 import org.powernukkitx.form.element.ElementDivider;
 import org.powernukkitx.form.element.ElementHeader;
@@ -27,6 +28,7 @@ import java.util.function.Consumer;
 @Setter
 @Accessors(chain = true, fluent = true)
 @NoArgsConstructor
+@Slf4j
 public class CustomForm extends Form<CustomResponse> {
     protected static Type LIST_STRING_TYPE = new TypeToken<List<String>>(){}.getType();
 
@@ -210,7 +212,19 @@ public class CustomForm extends Form<CustomResponse> {
 
         CustomResponse response = new CustomResponse();
 
-        List<String> elementResponses = JSONUtils.from(formData, LIST_STRING_TYPE);
+        final List<String> elementResponses;
+        try {
+            elementResponses = JSONUtils.from(formData, LIST_STRING_TYPE);
+        } catch (RuntimeException e) {
+            log.debug("Discarding malformed custom form response from {}", player.getName());
+            this.supplyClosed(player);
+            return null;
+        }
+
+        if (elementResponses == null) {
+            this.supplyClosed(player);
+            return null;
+        }
 
         for (int i = 0, responseSize = elementResponses.size(); i < responseSize; i++) {
             if (i >= this.elements.size()) {
@@ -224,16 +238,26 @@ public class CustomForm extends Form<CustomResponse> {
 
             switch (element) {
                 case ElementDropdown dropdown -> {
-                    int index = Integer.parseInt(responseData);
-                    String option = dropdown.options().get(index);
-                    elementResponse = new ElementResponse(index, option);
+                    Integer index = parseIndex(responseData, dropdown.options().size());
+                    if (index == null) {
+                        return this.rejectResponse(player, i);
+                    }
+                    elementResponse = new ElementResponse(index, dropdown.options().get(index));
                 }
-                case ElementInput input -> elementResponse = responseData;
-                case ElementSlider slider -> elementResponse = Float.parseFloat(responseData);
+                case ElementInput input -> elementResponse = responseData == null ? "" : responseData;
+                case ElementSlider slider -> {
+                    Float value = parseSliderValue(responseData, slider);
+                    if (value == null) {
+                        return this.rejectResponse(player, i);
+                    }
+                    elementResponse = value;
+                }
                 case ElementStepSlider stepSlider -> {
-                    int index = Integer.parseInt(responseData);
-                    String step = stepSlider.steps().get(index);
-                    elementResponse = new ElementResponse(index, step);
+                    Integer index = parseIndex(responseData, stepSlider.steps().size());
+                    if (index == null) {
+                        return this.rejectResponse(player, i);
+                    }
+                    elementResponse = new ElementResponse(index, stepSlider.steps().get(index));
                 }
                 case ElementToggle toggle -> elementResponse = Boolean.parseBoolean(responseData);
                 case ElementDivider divider -> elementResponse = divider.text();
@@ -247,6 +271,43 @@ public class CustomForm extends Form<CustomResponse> {
 
         this.supplySubmitted(player, response);
         return response;
+    }
+
+    private CustomResponse rejectResponse(Player player, int index) {
+        log.debug("Discarding custom form response from {}: element {} was not offered", player.getName(), index);
+        this.supplyClosed(player);
+        return null;
+    }
+
+    private static Integer parseIndex(String responseData, int size) {
+        if (responseData == null) {
+            return null;
+        }
+        final int index;
+        try {
+            index = Integer.parseInt(responseData.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+        return index >= 0 && index < size ? index : null;
+    }
+
+    private static Float parseSliderValue(String responseData, ElementSlider slider) {
+        if (responseData == null) {
+            return null;
+        }
+        final float value;
+        try {
+            value = Float.parseFloat(responseData.trim());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+        if (!Float.isFinite(value)) {
+            return null;
+        }
+        final float low = Math.min(slider.min(), slider.max());
+        final float high = Math.max(slider.min(), slider.max());
+        return Math.clamp(value, low, high);
     }
 
     @Override
