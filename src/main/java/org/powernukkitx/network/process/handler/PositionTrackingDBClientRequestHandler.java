@@ -24,6 +24,10 @@ public class PositionTrackingDBClientRequestHandler implements PacketHandler<Pos
     public void handle(PositionTrackingDBClientRequestPacket packet, PlayerSessionHolder holder, Server server) {
         PlayerHandle playerHandle = holder.getPlayerHandle();
         Player player = playerHandle.player;
+        if (!playerHandle.packetRateLimiter.tryPositionTracking()) {
+            log.debug("Player {} exceeded the position tracking request rate limit", playerHandle.getUsername());
+            return;
+        }
         try {
             PositionTracking positionTracking = player.getServer().getPositionTrackingService().startTracking(player, packet.getTrackingId(), true);
             if (positionTracking != null) return;

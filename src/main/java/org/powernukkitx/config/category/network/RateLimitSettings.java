@@ -26,4 +26,8 @@ public class RateLimitSettings extends OkaeriConfig {
     int maxMovementPacketsPerSecondPerPlayer = 40;
     @Comment("pnx.settings.network.ratelimit.maxworldinteractionperplayer")
     int maxWorldInteractionPacketsPerSecondPerPlayer = 30;
+    @Comment("pnx.settings.network.ratelimit.maxskinperplayer")
+    int maxSkinPacketsPerSecondPerPlayer = 10;
+    @Comment("pnx.settings.network.ratelimit.maxpositiontrackingperplayer")
+    int maxPositionTrackingPacketsPerSecondPerPlayer = 20;
 }

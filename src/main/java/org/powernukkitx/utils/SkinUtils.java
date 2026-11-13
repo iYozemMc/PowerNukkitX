@@ -13,6 +13,14 @@ import java.util.List;
 @UtilityClass
 public class SkinUtils {
 
+    /**
+     * Largest skin or cape dimension accepted, in pixels. The largest format Bedrock itself ships is
+     * 128x128, so this leaves headroom while keeping a hostile client from declaring a huge image
+     */
+    public static final int MAX_SKIN_DIMENSION = 256;
+    /** Largest accepted raw image buffer: {@link #MAX_SKIN_DIMENSION} squared, four bytes per pixel. */
+    public static final int MAX_SKIN_IMAGE_BYTES = MAX_SKIN_DIMENSION * MAX_SKIN_DIMENSION * 4;
+
     public SerializedImage getImage(JsonObject token, String name) {
         if (token.has(name + "Data")) {
             byte[] skinImage = Base64.getDecoder().decode(token.get(name + "Data").getAsString());
@@ -48,6 +56,8 @@ public class SkinUtils {
     public boolean isValid(Skin skin) {
         return skin.getSkinId() != null && !skin.getSkinId().trim().isEmpty() && skin.getSkinId().length() < 100 &&
                 skin.getSkinData() != null && skin.getSkinData().getWidth() >= 32 && skin.getSkinData().getHeight() >= 32 &&
+                skin.getSkinData().getWidth() <= MAX_SKIN_DIMENSION && skin.getSkinData().getHeight() <= MAX_SKIN_DIMENSION &&
+                skin.getSkinData().getImage().length <= MAX_SKIN_IMAGE_BYTES &&
                 skin.getSkinData().getImage().length >= Skin.SINGLE_SKIN_SIZE &&
                 (skin.getPlayFabId() == null || skin.getPlayFabId().length() < 100) &&
                 (skin.getCapeId() == null || skin.getCapeId().length() < 100) &&

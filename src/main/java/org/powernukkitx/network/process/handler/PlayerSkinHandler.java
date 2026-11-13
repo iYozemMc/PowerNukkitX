@@ -30,6 +30,11 @@ public class PlayerSkinHandler implements PacketHandler<PlayerSkinPacket> {
             return;
         }
 
+        if (!playerHandle.packetRateLimiter.trySkin()) {
+            log.debug("Player {} exceeded the skin packet rate limit", playerHandle.getUsername());
+            return;
+        }
+
         long cooldown = TimeUnit.SECONDS.toMillis(player.getServer().getSettings().playerSettings().skinChangeCooldown());
         if (cooldown > System.currentTimeMillis() - player.lastSkinChange) {
             log.debug("Player {} changed skin too quick!", playerHandle.getUsername());

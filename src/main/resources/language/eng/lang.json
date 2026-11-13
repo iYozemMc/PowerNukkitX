@@ -212,6 +212,8 @@
   "pnx.settings.network.ratelimit.maxformresponsesperplayer": "Maximum form response packets per second per player. 0 disables the limit",
   "pnx.settings.network.ratelimit.maxworldinteractionperplayer": "Maximum packets per second per player for requests that make the server scan the level or broadcast to nearby players (map info, lectern updates, sounds, animations, emotes). Excess is dropped silently. 0 disables the limit",
   "pnx.settings.network.ratelimit.maxmovementperplayer": "Maximum movement packets per second per player. 0 disables the limit\nPlayers can only send one per tick (20/s), but high ping may lead to false rate-limiting.",
+  "pnx.settings.network.ratelimit.maxskinperplayer": "Maximum skin packets per second per player. Caps the decoding work a client can force by resending skins, including skins the server then rejects as invalid. 0 disables the limit",
+  "pnx.settings.network.ratelimit.maxpositiontrackingperplayer": "Maximum position tracking database requests per second per player. Each request can hit the disk, so this caps the I/O a single client can force. 0 disables the limit",
   "pnx.settings.network.botnet": "Botnet and distributed flood detection settings",
   "pnx.settings.network.botnet.enabled": "Whether to enable botnet / distributed flood detection",
   "pnx.settings.network.botnet.suspiciousthreshold": "Packets per second a single session must exceed to be considered suspicious",

@@ -17,6 +17,8 @@ public final class PacketRateLimiter {
     private final RateLimiter formResponse;
     private final RateLimiter movement;
     private final RateLimiter worldInteraction;
+    private final RateLimiter skin;
+    private final RateLimiter positionTracking;
 
     public PacketRateLimiter(RateLimitSettings settings) {
         this.command = create(settings.maxCommandsPerSecondPerPlayer());
@@ -24,6 +26,8 @@ public final class PacketRateLimiter {
         this.formResponse = create(settings.maxFormResponsesPerSecondPerPlayer());
         this.movement = create(settings.maxMovementPacketsPerSecondPerPlayer());
         this.worldInteraction = create(settings.maxWorldInteractionPacketsPerSecondPerPlayer());
+        this.skin = create(settings.maxSkinPacketsPerSecondPerPlayer());
+        this.positionTracking = create(settings.maxPositionTrackingPacketsPerSecondPerPlayer());
     }
 
     /**
@@ -55,6 +59,16 @@ public final class PacketRateLimiter {
     /** @return true if the movement packet should be processed, false if it should be dropped. */
     public boolean tryMovement() {
         return movement.tryAcquire();
+    }
+
+    /** @return true if the skin packet should be processed, false if it should be dropped. */
+    public boolean trySkin() {
+        return skin.tryAcquire();
+    }
+
+    /** @return true if the position tracking request should be processed, false if it should be dropped. */
+    public boolean tryPositionTracking() {
+        return positionTracking.tryAcquire();
     }
 
     public boolean tryWorldInteraction() {
